@@ -47,7 +47,7 @@ app.use(bodyParser.json());
 const ACCESS_TOKEN =
   "EAAQMTh0HlxwBO3V5sY7sgaeNDfrXRwredKvHCgRX9BGZCZCesnnjQyfwUZBMDeFtvpB3xorUyiMYmHdVxuiCNbN4CX1rvOUfwyDYke0MypcdMvq4zocu4OqEKPTMaAiQhP5wXks2PqiAq3e1AQwvAIdkfjXHzxu9gXtBxkVVnmHqwzGRLmjZAkaYQqj0ceFQjmAZBQJrDZAT5rlM1xn6Tl5vZC4O0nFLayYDWcZD";
 //const PHONE_NUMBER_ID = 
-const VERSION = "v19.0";
+const VERSION = "v22.0";
 
 // Global in-memory store for user contexts
 const userContexts = new Map();
