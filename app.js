@@ -173,7 +173,7 @@ const handleTextMessages = async (message, phone, phoneNumberId) => {
       console.log("User context reset.");
       break;
 
-    case "menu":
+    case "catalog":
       console.log("User requested the menu.");
       await sendDefaultCatalog(phone, phoneNumberId);
       break;
@@ -337,7 +337,7 @@ app.post("/webhook", async (req, res) => {
         }
 
         processedMessages.add(uniqueMessageId);
-      //if (phoneNumberId === "396791596844039") {
+      
              
         try {
             if (phoneNumberId === "566590419864792") {
