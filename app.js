@@ -550,7 +550,7 @@ async function sendDefaultCatalog(phone, phoneNumberId) {
           type: "text",  // The header type should be "image" to support both image and text
           text: "Global In One LTD"  // You can include text along with the image
         },
-        body: { text: "Order & get free delivery!" },
+        body: { text: "Order & get fast delivery!" },
         action: {
           catalog_id: "1128955182287808",
           sections: [
