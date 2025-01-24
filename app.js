@@ -514,6 +514,12 @@ async function sendWhatsAppMessage(phone, messagePayload, phoneNumberId) {
         recipient_type: "individual",
         to: formatPhoneNumber(phone),
         ...messagePayload,
+        // Add verified name details
+        context: {
+            verified_name: {
+                name: "Global In One LTD"
+            }
+        }
       },
     });
 
