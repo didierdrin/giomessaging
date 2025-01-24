@@ -515,11 +515,11 @@ async function sendWhatsAppMessage(phone, messagePayload, phoneNumberId) {
         to: formatPhoneNumber(phone),
         ...messagePayload,
         // Add verified name details
-        context: {
-            verified_name: {
-                name: "Global In One LTD"
-            }
-        }
+        // context: {
+        //     verified_name: {
+        //         name: "Global In One LTD"
+        //     }
+        // }
       },
     });
 
