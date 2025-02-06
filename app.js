@@ -177,6 +177,10 @@ const handleTextMessages = async (message, phone, phoneNumberId) => {
       console.log("User requested the menu.");
       await sendDefaultCatalog(phone, phoneNumberId);
       break;
+    case "products":
+      console.log("User requested the menu.");
+      await sendDefaultCatalog(phone, phoneNumberId);
+      break;
     case "gio":
       console.log("User requested the menu.");
       await sendDefaultCatalog(phone, phoneNumberId);
