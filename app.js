@@ -296,7 +296,7 @@ const handleLocation = async (location, phone, phoneNumberId) => {
     }, phoneNumberId);
 
     // Update user context to expect TIN input
-    userContext.docReference = docRef.id;
+    userContext.docReference = docRef;
     userContext.vendorNumber = vendorNumber;
     userContext.currency = currentCurrency;
     userContext.stage = "EXPECTING_TIN";
