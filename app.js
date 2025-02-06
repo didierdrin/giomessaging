@@ -280,7 +280,7 @@ const handleLocation = async (location, phone, phoneNumberId) => {
     };
 
     // Save directly to Firebase
-    const docRef = await firestore.collection("whatsappOrders").add(orderData);
+    const docRef = await firestore.collection("whatsappOrdersGio").add(orderData);
     console.log("Order saved successfully to Firebase with ID:", docRef.id);
 
     // Send the TIN request to the customer
@@ -292,6 +292,7 @@ const handleLocation = async (location, phone, phoneNumberId) => {
     }, phoneNumberId);
 
     // Update user context to expect TIN input
+    userContext.docReference = docRef.id;
     userContext.vendorNumber = vendorNumber;
     userContext.currency = currentCurrency;
     userContext.stage = "EXPECTING_TIN";
@@ -380,9 +381,15 @@ app.post("/webhook", async (req, res) => {
                     console.log(`User ${phone} provided TIN: ${tin}`);
                     // Store the TIN or process it as required
                     // Update the context to expect the location
-                    //userContext.tin = tin;  // Save the TIN
+                    userContext.tin = tin;  // Save the TIN
                     userContext.stage = "EXPECTING_MTN_AIRTEL"; // Move to location stage
                     userContexts.set(phone, userContext);
+                    docReferenc = userContext.docReference;
+                    // Later, when you want to update the same document
+await docReferenc.update({
+  TIN: userContext.tin  // Replace 'userProvidedTIN' with the actual TIN value you receive from the customer
+  
+});
   
                     await sendWhatsAppMessage(phone, {
                       type: "interactive",
@@ -552,17 +559,17 @@ async function sendDefaultCatalog(phone, phoneNumberId) {
         },
         body: { text: "Order & get fast delivery!" },
         action: {
-          catalog_id: "1128955182287808",
+          catalog_id: "2071018050036168",
           sections: [
             {
               title: "Our Products",
               product_items: [
                
-                { product_retailer_id: "wywp40g4ce" },
-                { product_retailer_id: "j262675ijh" },
-                { product_retailer_id: "u3ls74gyjy" },
-                { product_retailer_id: "0yxp4rom0m" }, 
-                { product_retailer_id: "hwmi9t3sux" },
+                { product_retailer_id: "mg2q530x13" },
+                { product_retailer_id: "t1q2ty3kr4" },
+                { product_retailer_id: "4qr3qyirk5" },
+                { product_retailer_id: "3iqefj5eax" }, 
+                { product_retailer_id: "pgjcz51oim" },
                 
                
               ],
@@ -700,11 +707,12 @@ app.post("/api/save-order", async (req, res) => {
       served: false,
       accepted: false,
       vendor: vendorNumber,
+      tin: userContext.tin,
       deliveryLocation: deliveryLocation || null // Add location data
     };
 
     // Save order to Firestore
-    const docRef = await firestore.collection("whatsappOrders").add(orderData);
+    const docRef = await firestore.collection("whatsappOrdersGio").add(orderData);
 
     console.log("Order saved successfully with ID:", docRef.id);
 
@@ -721,7 +729,7 @@ app.post("/api/save-order", async (req, res) => {
 
 
 async function fetchFacebookCatalogProducts() {
-  const url = `https://graph.facebook.com/v12.0/1128955182287808/products?fields=id,name,description,price,image_url,retailer_id`;
+  const url = `https://graph.facebook.com/v12.0/2071018050036168/products?fields=id,name,description,price,image_url,retailer_id`;
   let products = [];
   let nextPage = url;
 
