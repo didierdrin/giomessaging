@@ -341,7 +341,7 @@ app.post("/webhook", async (req, res) => {
       
              
         try {
-            if (phoneNumberId === "566590419864792") {
+            if (phoneNumberId === "541671652366663") {
                await handlePhoneNumber2Logic(message, phone, changes, phoneNumberId);
             } else {
                 console.warn("Unknown phone number ID:", phoneNumberId);
@@ -521,12 +521,7 @@ async function sendWhatsAppMessage(phone, messagePayload, phoneNumberId) {
         recipient_type: "individual",
         to: formatPhoneNumber(phone),
         ...messagePayload,
-        // Add verified name details
-        // context: {
-        //     verified_name: {
-        //         name: "Global In One LTD"
-        //     }
-        // }
+       
       },
     });
 
