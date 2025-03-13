@@ -182,13 +182,13 @@ const handleTextMessages = async (message, phone, phoneNumberId) => {
     case "products":
       console.log("User requested the menu.");
       // Provide an array of categories available.
-      const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
+      //const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
       await sendCategoryList(phone, phoneNumberId, categories);
       break;
     case "gio":
       console.log("User requested the menu.");
       // Provide an array of categories available.
-      const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
+      //const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
       await sendCategoryList(phone, phoneNumberId, categories);
       break;
 
