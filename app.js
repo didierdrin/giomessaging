@@ -134,22 +134,8 @@ const handleOrder = async (message, changes, displayPhoneNumber, phoneNumberId) 
 
   try {
 
-
-    // Send location request message
-    const locationRequestPayload = {
-      type: "interactive",
-      interactive: {
-        type: "location_request_message",
-        body: {
-          text: "Share your delivery location",
-        },
-        action: {
-          name: "send_location",
-        },
-      },
-    };
-
-    await sendWhatsAppMessage(customerInfo.phone, locationRequestPayload, phoneNumberId);
+    await sendOrderPrompt(phone, phoneNumberId);
+    
     console.log("Order saved successfully.");
   } catch (error) {
     console.error("Error saving order:", error.message);
@@ -296,7 +282,17 @@ const handleLocation = async (location, phone, phoneNumberId) => {
 
 
 
-    await sendOrderPrompt(phone, phoneNumberId);
+    
+
+    await sendWhatsAppMessage(phone, {
+      type: "text",
+      text: {
+        body: "Please provide your TIN(e.g., 101589140) or 0 if no TIN:",
+      },
+    }, phoneNumberId);
+
+    userContext.stage = "EXPECTING_TIN";
+    
 
 
     // Update user context to expect TIN input
@@ -480,19 +476,26 @@ async function handlePhoneNumber2Logic(message, phone, changes, phoneNumberId) {
                   body: `*Oops*\nOrder cancelled. Please contact us on +250788640995`
                 }
               }, phoneNumberId);
-            } else if (buttonId.startsWith('CHECKOUT')) {
-              // Send the TIN request to the customer
-              await sendWhatsAppMessage(phone, {
-                type: "text",
-                text: {
-                  body: "Please provide your TIN(e.g., 101589140) or 0 if no TIN:",
-                },
-              }, phoneNumberId);
+            } else if (buttonId === 'CHECKOUT') {
+              
+              // Send location request message
+    const locationRequestPayload = {
+      type: "interactive",
+      interactive: {
+        type: "location_request_message",
+        body: {
+          text: "Share your delivery location",
+        },
+        action: {
+          name: "send_location",
+        },
+      },
+    };
 
-              userContext.stage = "EXPECTING_TIN";
-              userContexts.set(phone, userContext);
+    await sendWhatsAppMessage(customerInfo.phone, locationRequestPayload, phoneNumberId);
 
-            } else if (buttonId.startsWith('MORE')) {
+
+            } else if (buttonId === 'MORE') {
               const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
               await sendCategoryList(phone, phoneNumberId, categories);
             }
