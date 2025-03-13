@@ -445,7 +445,16 @@ await docReferenc.update({
                     console.log("Expecting MTN & AIRTEL button reply");
                     return;
                   }
-                } 
+                } else if (message.interactive.type === "list_reply") {
+        // User selected a category from the list.
+        const selectedCategory = message.interactive.list_reply.id;
+        console.log("User selected category:", selectedCategory);
+        await sendCatalogForCategory(phone, phoneNumberId, selectedCategory);
+      }
+
+
+
+    
                 break;
              
   
@@ -671,14 +680,40 @@ function chunkArray(array, chunkSize) {
 }
 
 /**
- * Given a category and its product retailer IDs, sends catalog messages in chunks (30 items per message).
+ * Given a category, fetches product retailer IDs from Firestore.
+ * It queries the "gioproducts" collection where "category" equals the provided category.
+ * The returned array uses the document ID as the product retailer ID.
  */
-async function sendCatalogForCategory(phone, phoneNumberId, category, productRetailerIds) {
-  // Split product retailer IDs into chunks of 30 items each.
+async function fetchProductRetailerIDs(category) {
+  try {
+    const snapshot = await firestore.collection("gioproducts")
+      .where("category", "==", category)
+      .get();
+    if (snapshot.empty) {
+      console.warn("No products found for category:", category);
+      return [];
+    }
+    // Use the document id as product retailer id.
+    return snapshot.docs.map(doc => doc.id);
+  } catch (error) {
+    console.error("Error fetching products for category:", category, error.message);
+    return [];
+  }
+}
+
+/**
+ * For a given category, fetches product IDs from Firestore and sends catalog messages in chunks.
+ */
+async function sendCatalogForCategory(phone, phoneNumberId, category) {
+  const productRetailerIds = await fetchProductRetailerIDs(category);
+  if (!productRetailerIds || productRetailerIds.length === 0) {
+    console.error("No product IDs fetched for category:", category);
+    return;
+  }
   const chunks = chunkArray(productRetailerIds, 30);
   for (const chunk of chunks) {
     await sendCatalogChunk(phone, phoneNumberId, category, chunk);
-    // Optionally add a small delay between messages to avoid rate limits:
+    // Optional delay to avoid rate limits
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 }
