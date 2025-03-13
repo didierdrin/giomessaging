@@ -77,9 +77,9 @@ const handleMobileMoneySelection = async (buttonId, phone, phoneNumberId) => {
   if (currentCurrency === "RWF") {
     // Payment messages for Rwanda
     if (buttonId === "mtn_momo") {
-      callToActionMessage = `Please pay with\nMTN MoMo to ${vendorNumber}, name Global In One LTD`;
+      callToActionMessage = `*Pay*\nPlease pay with\nMTN MoMo to ${vendorNumber}, name Global In One LTD`;
     } else if (buttonId === "airtel_mobile_money") {
-      callToActionMessage = `Please pay with\nAirtel Money to ${vendorNumber}, name Global In One LTD`;
+      callToActionMessage = `*Pay*\nPlease pay with\nAirtel Money to ${vendorNumber}, name Global In One LTD`;
     } else {
       console.log("Unrecognized mobile money option for Rwanda:", buttonId);
       return;
@@ -420,10 +420,10 @@ async function handlePhoneNumber2Logic(message, phone, changes, phoneNumberId) {
               action: {
                 buttons: [
                   { type: "reply", reply: { id: "mtn_momo", title: "MTN MoMo" } },
-                  {
-                    type: "reply",
-                    reply: { id: "airtel_mobile_money", title: "Airtel Money" },
-                  },
+                  // {
+                  //   type: "reply",
+                  //   reply: { id: "airtel_mobile_money", title: "Airtel Money" },
+                  // },
                 ],
               },
             },
@@ -457,22 +457,24 @@ async function handlePhoneNumber2Logic(message, phone, changes, phoneNumberId) {
       
             if (!orderSnapshot.empty) {
               const docRef = orderSnapshot.docs[0].ref;
+              const orderData = orderSnapshot.docs[0].data();
+              const customerPhone = orderData.phone; // Get customer's phone number
       
               if (buttonId.startsWith('confirm_')) {
                 await docRef.update({
                   paid: true
                 });
-                await sendWhatsAppMessage(phone, {
+                await sendWhatsAppMessage(customerPhone, {
                   type: "text",
                   text: {
-                    body: `*Thank you*\nReceived your payment successfully! Your order is being processed and will be delivered soon`
+                    body: `*Thank you*\nWe received your payment successfully! Your order is being processed and will be delivered soon`
                   }
                 }, phoneNumberId);
               } else if (buttonId.startsWith('cancel_')) {
                 await docRef.update({
                   rejected: true
                 });
-                await sendWhatsAppMessage(phone, {
+                await sendWhatsAppMessage(customerPhone, {
                   type: "text",
                   text: {
                     body: `*Oops*\nOrder cancelled. Please contact us on +250788640995`
