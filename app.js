@@ -135,7 +135,7 @@ const handleOrder = async (message, changes, displayPhoneNumber, phoneNumberId) 
   try {
 
     await sendOrderPrompt(customerInfo.phone, phoneNumberId);
-    
+
     console.log("Order saved successfully.");
   } catch (error) {
     console.error("Error saving order:", error.message);
@@ -282,7 +282,7 @@ const handleLocation = async (location, phone, phoneNumberId) => {
 
 
 
-    
+
 
     await sendWhatsAppMessage(phone, {
       type: "text",
@@ -292,7 +292,7 @@ const handleLocation = async (location, phone, phoneNumberId) => {
     }, phoneNumberId);
 
     userContext.stage = "EXPECTING_TIN";
-    
+
 
 
     // Update user context to expect TIN input
@@ -438,90 +438,171 @@ async function handlePhoneNumber2Logic(message, phone, changes, phoneNumberId) {
       }
       break;
 
-    case "interactive":
-      if (message.interactive.type === "button_reply") {
-        const buttonId = message.interactive.button_reply.id;
-
-        // Handle order confirmation/cancellation buttons
-        if (buttonId.startsWith('confirm_') || buttonId.startsWith('cancel_')) {
-          const orderId = buttonId.split('_')[1];
-
-          // Find the order in Firestore
-          const orderSnapshot = await firestore.collection("whatsappOrdersGio")
-            .where("orderId", "==", orderId)
-            .get();
-
-          if (!orderSnapshot.empty) {
-            const docRef = orderSnapshot.docs[0].ref;
-
-            if (buttonId.startsWith('confirm_')) {
-              // Update paid status
-              await docRef.update({
-                paid: true
-              });
-              await sendWhatsAppMessage(phone, {
-                type: "text",
-                text: {
-                  body: `*Thank you*\nReceived your payment successfully! Your order is being processed and will be delivered soon`
-                }
-              }, phoneNumberId);
-            } else if (buttonId.startsWith('cancel_')) {
-              // Update rejected status
-              await docRef.update({
-                rejected: true
-              });
-              await sendWhatsAppMessage(phone, {
-                type: "text",
-                text: {
-                  body: `*Oops*\nOrder cancelled. Please contact us on +250788640995`
-                }
-              }, phoneNumberId);
-            } else if (buttonId === 'CHECKOUT') {
-              
-              // Send location request message
-    const locationRequestPayload = {
-      type: "interactive",
-      interactive: {
-        type: "location_request_message",
-        body: {
-          text: "Share your delivery location",
-        },
-        action: {
-          name: "send_location",
-        },
-      },
-    };
-
-    await sendWhatsAppMessage(customerInfo.phone, locationRequestPayload, phoneNumberId);
-
-
-            } else if (buttonId === 'MORE') {
-              const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
-              await sendCategoryList(phone, phoneNumberId, categories);
+      case "interactive":
+        if (message.interactive.type === "button_reply") {
+          const buttonId = message.interactive.button_reply.id;
+      
+          // Handle order confirmation/cancellation buttons
+          if (buttonId.startsWith('confirm_') || buttonId.startsWith('cancel_')) {
+            const orderId = buttonId.split('_')[1];
+      
+            // Find the order in Firestore
+            const orderSnapshot = await firestore.collection("whatsappOrdersGio")
+              .where("orderId", "==", orderId)
+              .get();
+      
+            if (!orderSnapshot.empty) {
+              const docRef = orderSnapshot.docs[0].ref;
+      
+              if (buttonId.startsWith('confirm_')) {
+                await docRef.update({
+                  paid: true
+                });
+                await sendWhatsAppMessage(phone, {
+                  type: "text",
+                  text: {
+                    body: `*Thank you*\nReceived your payment successfully! Your order is being processed and will be delivered soon`
+                  }
+                }, phoneNumberId);
+              } else if (buttonId.startsWith('cancel_')) {
+                await docRef.update({
+                  rejected: true
+                });
+                await sendWhatsAppMessage(phone, {
+                  type: "text",
+                  text: {
+                    body: `*Oops*\nOrder cancelled. Please contact us on +250788640995`
+                  }
+                }, phoneNumberId);
+              }
             }
+            return;
           }
-          return;
+          
+          // Move CHECKOUT and MORE handlers outside the previous if block
+          else if (buttonId === 'CHECKOUT') {
+            // Send location request message
+            const locationRequestPayload = {
+              type: "interactive",
+              interactive: {
+                type: "location_request_message",
+                body: {
+                  text: "Share your delivery location",
+                },
+                action: {
+                  name: "send_location",
+                },
+              },
+            };
+      
+            await sendWhatsAppMessage(phone, locationRequestPayload, phoneNumberId);
+            return;
+          } 
+          else if (buttonId === 'MORE') {
+            const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
+            await sendCategoryList(phone, phoneNumberId, categories);
+            return;
+          }
+      
+          // Handle MTN/Airtel selection
+          const userContext = userContexts.get(phone) || {};
+          if (userContext.stage === "EXPECTING_MTN_AIRTEL") {
+            await handleMobileMoneySelection(buttonId, phone, phoneNumberId);
+            console.log("Expecting MTN & AIRTEL button reply");
+            return;
+          }
+        } 
+        else if (message.interactive.type === "list_reply") {
+          const selectedCategory = message.interactive.list_reply.id;
+          console.log("User selected category:", selectedCategory);
+          await sendCatalogForCategory(phone, phoneNumberId, selectedCategory);
         }
+        break;
 
-        // Only process if MENU pay
-        const userContext = userContexts.get(phone) || {};
+    // case "interactive":
+    //   if (message.interactive.type === "button_reply") {
+    //     const buttonId = message.interactive.button_reply.id;
 
-        if (userContext.stage === "EXPECTING_MTN_AIRTEL") {
-          await handleMobileMoneySelection(buttonId, phone, phoneNumberId);
-          console.log("Expecting MTN & AIRTEL button reply");
-          return;
-        }
-      } else if (message.interactive.type === "list_reply") {
-        // User selected a category from the list.
-        const selectedCategory = message.interactive.list_reply.id;
-        console.log("User selected category:", selectedCategory);
-        await sendCatalogForCategory(phone, phoneNumberId, selectedCategory);
-      }
+    //     // Handle order confirmation/cancellation buttons
+    //     if (buttonId.startsWith('confirm_') || buttonId.startsWith('cancel_')) {
+    //       const orderId = buttonId.split('_')[1];
+
+    //       // Find the order in Firestore
+    //       const orderSnapshot = await firestore.collection("whatsappOrdersGio")
+    //         .where("orderId", "==", orderId)
+    //         .get();
+
+    //       if (!orderSnapshot.empty) {
+    //         const docRef = orderSnapshot.docs[0].ref;
+
+    //         if (buttonId.startsWith('confirm_')) {
+    //           // Update paid status
+    //           await docRef.update({
+    //             paid: true
+    //           });
+    //           await sendWhatsAppMessage(phone, {
+    //             type: "text",
+    //             text: {
+    //               body: `*Thank you*\nReceived your payment successfully! Your order is being processed and will be delivered soon`
+    //             }
+    //           }, phoneNumberId);
+    //         } else if (buttonId.startsWith('cancel_')) {
+    //           // Update rejected status
+    //           await docRef.update({
+    //             rejected: true
+    //           });
+    //           await sendWhatsAppMessage(phone, {
+    //             type: "text",
+    //             text: {
+    //               body: `*Oops*\nOrder cancelled. Please contact us on +250788640995`
+    //             }
+    //           }, phoneNumberId);
+    //         } else if (buttonId === 'CHECKOUT') {
+
+    //           // Send location request message
+    //           const locationRequestPayload = {
+    //             type: "interactive",
+    //             interactive: {
+    //               type: "location_request_message",
+    //               body: {
+    //                 text: "Share your delivery location",
+    //               },
+    //               action: {
+    //                 name: "send_location",
+    //               },
+    //             },
+    //           };
+
+    //           await sendWhatsAppMessage(customerInfo.phone, locationRequestPayload, phoneNumberId);
+
+
+    //         } else if (buttonId === 'MORE') {
+    //           const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
+    //           await sendCategoryList(phone, phoneNumberId, categories);
+    //         }
+    //       }
+    //       return;
+    //     }
+
+    //     // Only process if MENU pay
+    //     const userContext = userContexts.get(phone) || {};
+
+    //     if (userContext.stage === "EXPECTING_MTN_AIRTEL") {
+    //       await handleMobileMoneySelection(buttonId, phone, phoneNumberId);
+    //       console.log("Expecting MTN & AIRTEL button reply");
+    //       return;
+    //     }
+    //   } else if (message.interactive.type === "list_reply") {
+    //     // User selected a category from the list.
+    //     const selectedCategory = message.interactive.list_reply.id;
+    //     console.log("User selected category:", selectedCategory);
+    //     await sendCatalogForCategory(phone, phoneNumberId, selectedCategory);
+    //   }
 
 
 
 
-      break;
+    //   break;
 
 
     case "location":
@@ -640,7 +721,7 @@ async function sendCategoryList(phone, phoneNumberId, categories) {
     // Build list items from categories; each row's id is the category name.
     const rows = categories.map(cat => ({
       id: cat, // use the category name (or ID) as the row id
-      title: capitalizeCategory(cat), 
+      title: capitalizeCategory(cat),
       //description: `See our ${cat} products`
     }));
 
