@@ -133,7 +133,7 @@ const handleOrder = async (message, changes, displayPhoneNumber, phoneNumberId) 
   userContexts.set(customerInfo.phone, userContext);
 
   try {
-    
+
 
     // Send location request message
     const locationRequestPayload = {
@@ -192,7 +192,7 @@ const handleTextMessages = async (message, phone, phoneNumberId) => {
       await sendCategoryList(phone, phoneNumberId, categories);
       break;
 
-   
+
 
     default:
       console.log(`Received unrecognized message: ${messageText}`);
@@ -208,7 +208,7 @@ const handleLocation = async (location, phone, phoneNumberId) => {
   try {
     // Retrieve the order from userContext
     const userContext = userContexts.get(phone);
-    
+
     if (!userContext || !userContext.order) {
       console.log("No order found in user context.");
       await sendWhatsAppMessage(phone, {
@@ -246,7 +246,7 @@ const handleLocation = async (location, phone, phoneNumberId) => {
     let vendorNumber = "+250788767816"; // Default Rwanda
     let currentCurrency = "RWF";
     let countryCodeText = "RW";
-    
+
     if (currencies === "XOF") {
       vendorNumber = "+22892450808"; // Togo
       currentCurrency = "XOF";
@@ -263,7 +263,7 @@ const handleLocation = async (location, phone, phoneNumberId) => {
     }
 
     const orderidd = orderNumber();
-    
+
     // Prepare order data for Firebase
     const orderData = {
       orderId: orderidd,
@@ -293,19 +293,17 @@ const handleLocation = async (location, phone, phoneNumberId) => {
     const docRef = await firestore.collection("whatsappOrdersGio").add(orderData);
     console.log("Order saved successfully to Firebase with ID:", docRef.id);
 
-    // Send the TIN request to the customer
-    await sendWhatsAppMessage(phone, {
-      type: "text",
-      text: {
-        body: "Please provide your TIN(e.g., 101589140) or 0 if no TIN:",
-      },
-    }, phoneNumberId);
+
+
+
+    await sendOrderPrompt(phone, phoneNumberId);
+
 
     // Update user context to expect TIN input
     userContext.docReference = docRef;
     userContext.vendorNumber = vendorNumber;
     userContext.currency = currentCurrency;
-    userContext.stage = "EXPECTING_TIN";
+
     userContexts.set(phone, userContext);
 
     console.log("Location updated and order saved successfully.");
@@ -328,163 +326,189 @@ const processedMessages = new Set();
 
 // Webhook endpoint for receiving messages
 app.post("/webhook", async (req, res) => {
-    if (req.body.object === "whatsapp_business_account") {
-        const changes = req.body.entry?.[0]?.changes?.[0];
-        const messages = changes.value?.messages;
-        const phoneNumberId = changes.value?.metadata?.phone_number_id;
+  if (req.body.object === "whatsapp_business_account") {
+    const changes = req.body.entry?.[0]?.changes?.[0];
+    const messages = changes.value?.messages;
+    const phoneNumberId = changes.value?.metadata?.phone_number_id;
 
-        if (!changes || !messages || !phoneNumberId) {
-            return res.status(400).send("Invalid payload.");
-        }
-
-        // Only process the first message in the array
-        const message = messages[0];
-        const phone = message.from;
-        const uniqueMessageId = `${phoneNumberId}-${message.id}`;
-
-        if (processedMessages.has(uniqueMessageId)) {
-            console.log("Duplicate message ignored:", uniqueMessageId);
-            return res.sendStatus(200);
-        }
-
-        processedMessages.add(uniqueMessageId);
-      
-             
-        try {
-            if (phoneNumberId === "541671652366663") {
-               await handlePhoneNumber2Logic(message, phone, changes, phoneNumberId);
-            } else {
-                console.warn("Unknown phone number ID:", phoneNumberId);
-            }
-        } catch (err) {
-            console.error("Error processing message:", err.message);
-        } finally {
-            setTimeout(() => processedMessages.delete(uniqueMessageId), 300000);
-        }
+    if (!changes || !messages || !phoneNumberId) {
+      return res.status(400).send("Invalid payload.");
     }
 
-    res.sendStatus(200);
+    // Only process the first message in the array
+    const message = messages[0];
+    const phone = message.from;
+    const uniqueMessageId = `${phoneNumberId}-${message.id}`;
+
+    if (processedMessages.has(uniqueMessageId)) {
+      console.log("Duplicate message ignored:", uniqueMessageId);
+      return res.sendStatus(200);
+    }
+
+    processedMessages.add(uniqueMessageId);
+
+
+    try {
+      if (phoneNumberId === "541671652366663") {
+        await handlePhoneNumber2Logic(message, phone, changes, phoneNumberId);
+      } else {
+        console.warn("Unknown phone number ID:", phoneNumberId);
+      }
+    } catch (err) {
+      console.error("Error processing message:", err.message);
+    } finally {
+      setTimeout(() => processedMessages.delete(uniqueMessageId), 300000);
+    }
+  }
+
+  res.sendStatus(200);
 });
 
 
 
 
 
-  async function handlePhoneNumber2Logic(message, phone, changes, phoneNumberId) {
-    switch (message.type) {
-              case "order":
-                await handleOrder(
-                  message,
-                  changes,
-                  changes.value.metadata.display_phone_number,
-                  phoneNumberId
-                );
-                break;
-  
-              case "text":
-                await handleTextMessages(message, phone, phoneNumberId);
-               
-                const userContext = userContexts.get(phone) || {};
-                if (userContext.stage === "EXPECTING_TIN") {
-                  const tin = message.text.body.trim();
-                  if (tin) {
-                    console.log(`User ${phone} provided TIN: ${tin}`);
-                    // Store the TIN or process it as required
-                    // Update the context to expect the location
-                    userContext.tin = tin;  // Save the TIN
-                    userContext.stage = "EXPECTING_MTN_AIRTEL"; // Move to location stage
-                    userContexts.set(phone, userContext);
-                    const docReferenc = userContext.docReference;
-                    // Later, when you want to update the same document
-await docReferenc.update({
-  TIN: userContext.tin  // Replace 'userProvidedTIN' with the actual TIN value you receive from the customer
-  
-});
-  
-                    await sendWhatsAppMessage(phone, {
-                      type: "interactive",
-                      interactive: {
-                        type: "button",
-                        body: {
-                          text: "Proceed to payment",
-                        },
-                        action: {
-                          buttons: [
-                            { type: "reply", reply: { id: "mtn_momo", title: "MTN MoMo" } },
-                            {
-                              type: "reply",
-                              reply: { id: "airtel_mobile_money", title: "Airtel Money" },
-                            },
-                          ],
-                        },
-                      },
-                    }, phoneNumberId);
-  
-                    return;  // Exit early after processing TIN
-                  } else {
-                    await sendWhatsAppMessage(phone, {
-                      type: "text",
-                      text: {
-                        body: "Invalid TIN. Please provide a valid TIN.",
-                      },
-                    }, phoneNumberId);
-                    return;
-                  }
+async function handlePhoneNumber2Logic(message, phone, changes, phoneNumberId) {
+  switch (message.type) {
+    case "order":
+      await handleOrder(
+        message,
+        changes,
+        changes.value.metadata.display_phone_number,
+        phoneNumberId
+      );
+      break;
+
+    case "text":
+      await handleTextMessages(message, phone, phoneNumberId);
+
+      const userContext = userContexts.get(phone) || {};
+      if (userContext.stage === "EXPECTING_TIN") {
+        const tin = message.text.body.trim();
+        if (tin) {
+          console.log(`User ${phone} provided TIN: ${tin}`);
+          // Store the TIN or process it as required
+          // Update the context to expect the location
+          userContext.tin = tin;  // Save the TIN
+          userContext.stage = "EXPECTING_MTN_AIRTEL"; // Move to location stage
+          userContexts.set(phone, userContext);
+          const docReferenc = userContext.docReference;
+          // Later, when you want to update the same document
+          await docReferenc.update({
+            TIN: userContext.tin  // Replace 'userProvidedTIN' with the actual TIN value you receive from the customer
+
+          });
+
+          // Call the order confirmation endpoint
+          try {
+            await axios.post(`https://giomessaging.onrender.com/api/send-order-confirmation`, {
+              orderId: userContext.order.orderId
+            });
+            console.log("Order confirmation endpoint triggered for order:", orderData.orderId);
+          } catch (error) {
+            console.error("Error triggering order confirmation endpoint:", error);
+            // Don't throw the error as we don't want to affect the main order flow
+          }
+
+          await sendWhatsAppMessage(phone, {
+            type: "interactive",
+            interactive: {
+              type: "button",
+              body: {
+                text: "Proceed to payment",
+              },
+              action: {
+                buttons: [
+                  { type: "reply", reply: { id: "mtn_momo", title: "MTN MoMo" } },
+                  {
+                    type: "reply",
+                    reply: { id: "airtel_mobile_money", title: "Airtel Money" },
+                  },
+                ],
+              },
+            },
+          }, phoneNumberId);
+
+          return;  // Exit early after processing TIN
+        } else {
+          await sendWhatsAppMessage(phone, {
+            type: "text",
+            text: {
+              body: "Invalid TIN. Please provide a valid TIN.",
+            },
+          }, phoneNumberId);
+          return;
+        }
+      }
+      break;
+
+    case "interactive":
+      if (message.interactive.type === "button_reply") {
+        const buttonId = message.interactive.button_reply.id;
+
+        // Handle order confirmation/cancellation buttons
+        if (buttonId.startsWith('confirm_') || buttonId.startsWith('cancel_')) {
+          const orderId = buttonId.split('_')[1];
+
+          // Find the order in Firestore
+          const orderSnapshot = await firestore.collection("whatsappOrdersGio")
+            .where("orderId", "==", orderId)
+            .get();
+
+          if (!orderSnapshot.empty) {
+            const docRef = orderSnapshot.docs[0].ref;
+
+            if (buttonId.startsWith('confirm_')) {
+              // Update paid status
+              await docRef.update({
+                paid: true
+              });
+              await sendWhatsAppMessage(phone, {
+                type: "text",
+                text: {
+                  body: `*Thank you*\nReceived your payment successfully! Your order is being processed and will be delivered soon`
                 }
-                break;
-  
-              case "interactive":
-                if (message.interactive.type === "button_reply") {
-                  const buttonId = message.interactive.button_reply.id;
-  
-                  // Handle order confirmation/cancellation buttons
-                  if (buttonId.startsWith('confirm_') || buttonId.startsWith('cancel_')) {
-                    const orderId = buttonId.split('_')[1];
-                    
-                    // Find the order in Firestore
-                    const orderSnapshot = await firestore.collection("whatsappOrdersGio")
-                      .where("orderId", "==", orderId)
-                      .get();
+              }, phoneNumberId);
+            } else if (buttonId.startsWith('cancel_')) {
+              // Update rejected status
+              await docRef.update({
+                rejected: true
+              });
+              await sendWhatsAppMessage(phone, {
+                type: "text",
+                text: {
+                  body: `*Oops*\nOrder cancelled. Please contact us on +250788640995`
+                }
+              }, phoneNumberId);
+            } else if (buttonId.startsWith('CHECKOUT')) {
+              // Send the TIN request to the customer
+              await sendWhatsAppMessage(phone, {
+                type: "text",
+                text: {
+                  body: "Please provide your TIN(e.g., 101589140) or 0 if no TIN:",
+                },
+              }, phoneNumberId);
 
-                    if (!orderSnapshot.empty) {
-                      const docRef = orderSnapshot.docs[0].ref;
-                      
-                      if (buttonId.startsWith('confirm_')) {
-                        // Update paid status
-                        await docRef.update({
-                          paid: true
-                        });
-                        await sendWhatsAppMessage(phone, {
-                          type: "text",
-                          text: {
-                            body: `*Thank you*\nReceived your payment successfully! Your order is being processed and will be delivered soon`
-                          }
-                        }, phoneNumberId);
-                      } else if (buttonId.startsWith('cancel_')) {
-                        // Update rejected status
-                        await docRef.update({
-                          rejected: true
-                        });
-                        await sendWhatsAppMessage(phone, {
-                          type: "text",
-                          text: {
-                            body: `*Oops*\nOrder cancelled. Please contact us on +250788640995`
-                          }
-                        }, phoneNumberId);
-                      }
-                    }
-                    return;
-                  }
+              userContext.stage = "EXPECTING_TIN";
+              userContexts.set(phone, userContext);
 
-                  // Only process if MENU pay
-                  const userContext = userContexts.get(phone) || {};
-             
-                  if (userContext.stage === "EXPECTING_MTN_AIRTEL") {
-                    await handleMobileMoneySelection(buttonId, phone, phoneNumberId);
-                    console.log("Expecting MTN & AIRTEL button reply");
-                    return;
-                  }
-                } else if (message.interactive.type === "list_reply") {
+            } else if (buttonId.startsWith('MORE')) {
+              const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
+              await sendCategoryList(phone, phoneNumberId, categories);
+            }
+          }
+          return;
+        }
+
+        // Only process if MENU pay
+        const userContext = userContexts.get(phone) || {};
+
+        if (userContext.stage === "EXPECTING_MTN_AIRTEL") {
+          await handleMobileMoneySelection(buttonId, phone, phoneNumberId);
+          console.log("Expecting MTN & AIRTEL button reply");
+          return;
+        }
+      } else if (message.interactive.type === "list_reply") {
         // User selected a category from the list.
         const selectedCategory = message.interactive.list_reply.id;
         console.log("User selected category:", selectedCategory);
@@ -493,24 +517,24 @@ await docReferenc.update({
 
 
 
-    
-                break;
-             
-  
-              case "location":
-                await handleLocation(message.location, phone, phoneNumberId);
-                break;
-  
-              default:
-                console.log("Unrecognized message type:", message.type);
-            }
+
+      break;
+
+
+    case "location":
+      await handleLocation(message.location, phone, phoneNumberId);
+      break;
+
+    default:
+      console.log("Unrecognized message type:", message.type);
   }
-  
-  
-  
-  
-  
-  
+}
+
+
+
+
+
+
 
 
 
@@ -579,7 +603,7 @@ async function sendWhatsAppMessage(phone, messagePayload, phoneNumberId) {
         recipient_type: "individual",
         to: formatPhoneNumber(phone),
         ...messagePayload,
-       
+
       },
     });
 
@@ -780,14 +804,14 @@ async function sendDefaultCatalog(phone, phoneNumberId) {
             {
               title: "Our Products",
               product_items: [
-               
+
                 { product_retailer_id: "mg2q530x13" },
                 { product_retailer_id: "t1q2ty3kr4" },
                 { product_retailer_id: "4qr3qyirk5" },
-                { product_retailer_id: "3iqefj5eax" }, 
+                { product_retailer_id: "3iqefj5eax" },
                 { product_retailer_id: "pgjcz51oim" },
-                
-               
+
+
               ],
             },
           ],
@@ -886,12 +910,12 @@ app.post("/api/save-order", async (req, res) => {
     }
 
     let currentOrder = 0;
-    
-   
-    
+
+
+
     function orderNumber() {
-      
-      
+
+
       const randomNum = uuidv4().split('-')[0];
       currentOrder += 1;
       const now = new Date();
@@ -899,7 +923,7 @@ app.post("/api/save-order", async (req, res) => {
       //return `ORD-${dateStr}-${randomNum.toString()}`;
       // Format the random number to always be 6 digits
       const formattedNum = randomNum.slice(0, 6).padStart(6, "0");
-  
+
       return `ORD-${dateStr}-${formattedNum}`;
       //randomNum.toString().padStart(6, "0")}
     }
@@ -975,14 +999,33 @@ async function fetchFacebookCatalogProducts() {
   }
 }
 
+async function sendOrderPrompt(phone, phoneNumberId) {
+  const userContext = userContexts.get(phone) || {};
+  const payload = {
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: `*Your order’s looking good!*\nWant to add anything else before checkout?` },
+      action: {
+        buttons: [
+          { type: "reply", reply: { id: "MORE", title: "More" } },
+          { type: "reply", reply: { id: "CHECKOUT", title: "Checkout" } }
+        ]
+      }
+    }
+  };
 
+  await sendWhatsAppMessage(phone, payload, phoneNumberId);
+  userContext.stage = "SEND_TIN_MESSAGE";
+  userContexts.set(phone, userContext);
+}
 
 // Add this new endpoint for sending order confirmation message
 app.post("/api/send-order-confirmation", async (req, res) => {
   try {
     const { orderId } = req.body;
     const ADMIN_PHONE = "250790649423";// "250788640995"; // Hardcoded admin phone number
-    
+
     if (!orderId) {
       return res.status(400).json({ message: "Order ID is required" });
     }
@@ -1000,7 +1043,7 @@ app.post("/api/send-order-confirmation", async (req, res) => {
     const docRef = orderSnapshot.docs[0].ref;
 
     // Format order details for the message
-    const orderDetails = orderData.products.map(product => 
+    const orderDetails = orderData.products.map(product =>
       `${product.product_name} x${product.quantity} - ${product.price * product.quantity} ${product.currency}`
     ).join('\n');
 
