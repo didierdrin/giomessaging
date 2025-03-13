@@ -134,7 +134,7 @@ const handleOrder = async (message, changes, displayPhoneNumber, phoneNumberId) 
 
   try {
 
-    await sendOrderPrompt(phone, phoneNumberId);
+    await sendOrderPrompt(customerInfo.phone, phoneNumberId);
     
     console.log("Order saved successfully.");
   } catch (error) {
@@ -622,6 +622,13 @@ async function sendWhatsAppMessage(phone, messagePayload, phoneNumberId) {
 }
 
 
+function capitalizeCategory(category) {
+  // Split by hyphen and capitalize each word
+  return category.split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 /**
  * Sends an interactive list message showing all categories.
  * When a user selects a category, your webhook should receive the selection and trigger sending catalog items.
@@ -633,7 +640,7 @@ async function sendCategoryList(phone, phoneNumberId, categories) {
     // Build list items from categories; each row's id is the category name.
     const rows = categories.map(cat => ({
       id: cat, // use the category name (or ID) as the row id
-      title: cat,
+      title: capitalizeCategory(cat), 
       //description: `See our ${cat} products`
     }));
 
