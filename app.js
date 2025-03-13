@@ -394,7 +394,7 @@ app.post("/webhook", async (req, res) => {
                     userContext.tin = tin;  // Save the TIN
                     userContext.stage = "EXPECTING_MTN_AIRTEL"; // Move to location stage
                     userContexts.set(phone, userContext);
-                    docReferenc = userContext.docReference;
+                    const docReferenc = userContext.docReference;
                     // Later, when you want to update the same document
 await docReferenc.update({
   TIN: userContext.tin  // Replace 'userProvidedTIN' with the actual TIN value you receive from the customer
