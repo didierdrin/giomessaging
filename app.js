@@ -70,16 +70,16 @@ const handleMobileMoneySelection = async (buttonId, phone, phoneNumberId) => {
     return;
   }
 
-  const vendorNumber = userContext.vendorNumber || "+250788767816"; // Default to Rwanda
+  const vendorNumber = "003827"; // Default to Rwanda
   const currentCurrency = userContext.currency || "RWF"; // Default to Rwanda
   let callToActionMessage = "";
 
   if (currentCurrency === "RWF") {
     // Payment messages for Rwanda
     if (buttonId === "mtn_momo") {
-      callToActionMessage = `Please pay with\nMTN MoMo to ${vendorNumber}, name Global In One LTD\n____________________\nYour order is being processed and will be delivered soon.`;
+      callToActionMessage = `Please pay with\nMTN MoMo to ${vendorNumber}, name Global In One LTD`;
     } else if (buttonId === "airtel_mobile_money") {
-      callToActionMessage = `Please pay with\nAirtel Money to ${vendorNumber}, name Global In One LTD\n____________________\nYour order is being processed and will be delivered soon.`;
+      callToActionMessage = `Please pay with\nAirtel Money to ${vendorNumber}, name Global In One LTD`;
     } else {
       console.log("Unrecognized mobile money option for Rwanda:", buttonId);
       return;
@@ -437,6 +437,45 @@ await docReferenc.update({
                 if (message.interactive.type === "button_reply") {
                   const buttonId = message.interactive.button_reply.id;
   
+                  // Handle order confirmation/cancellation buttons
+                  if (buttonId.startsWith('confirm_') || buttonId.startsWith('cancel_')) {
+                    const orderId = buttonId.split('_')[1];
+                    
+                    // Find the order in Firestore
+                    const orderSnapshot = await firestore.collection("whatsappOrdersGio")
+                      .where("orderId", "==", orderId)
+                      .get();
+
+                    if (!orderSnapshot.empty) {
+                      const docRef = orderSnapshot.docs[0].ref;
+                      
+                      if (buttonId.startsWith('confirm_')) {
+                        // Update paid status
+                        await docRef.update({
+                          paid: true
+                        });
+                        await sendWhatsAppMessage(phone, {
+                          type: "text",
+                          text: {
+                            body: `*Thank you*\nReceived your payment successfully! Your order is being processed and will be delivered soon`
+                          }
+                        }, phoneNumberId);
+                      } else if (buttonId.startsWith('cancel_')) {
+                        // Update rejected status
+                        await docRef.update({
+                          rejected: true
+                        });
+                        await sendWhatsAppMessage(phone, {
+                          type: "text",
+                          text: {
+                            body: `*Oops*\nOrder cancelled. Please contact us on +250788640995`
+                          }
+                        }, phoneNumberId);
+                      }
+                    }
+                    return;
+                  }
+
                   // Only process if MENU pay
                   const userContext = userContexts.get(phone) || {};
              
@@ -938,6 +977,73 @@ async function fetchFacebookCatalogProducts() {
 
 
 
+// Add this new endpoint for sending order confirmation message
+app.post("/api/send-order-confirmation", async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    const ADMIN_PHONE = "250790649423";// "250788640995"; // Hardcoded admin phone number
+    
+    if (!orderId) {
+      return res.status(400).json({ message: "Order ID is required" });
+    }
+
+    // Fetch order details from Firestore
+    const orderSnapshot = await firestore.collection("whatsappOrdersGio")
+      .where("orderId", "==", orderId)
+      .get();
+
+    if (orderSnapshot.empty) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const orderData = orderSnapshot.docs[0].data();
+    const docRef = orderSnapshot.docs[0].ref;
+
+    // Format order details for the message
+    const orderDetails = orderData.products.map(product => 
+      `${product.product_name} x${product.quantity} - ${product.price * product.quantity} ${product.currency}`
+    ).join('\n');
+
+    const messageBody = `New Order Received!\n\nOrder ID: ${orderData.orderId}\nCustomer Phone: ${orderData.phone}\nTotal Amount: ${orderData.amount} ${orderData.currency}\n\nItems:\n${orderDetails}\n\nPlease confirm or cancel this order.`;
+
+    // Send interactive message with buttons to admin
+    const messagePayload = {
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: {
+          text: messageBody
+        },
+        action: {
+          buttons: [
+            {
+              type: "reply",
+              reply: {
+                id: `confirm_${orderId}`,
+                title: "Confirm"
+              }
+            },
+            {
+              type: "reply",
+              reply: {
+                id: `cancel_${orderId}`,
+                title: "Cancel"
+              }
+            }
+          ]
+        }
+      }
+    };
+
+    // Send message to admin instead of customer
+    await sendWhatsAppMessage(ADMIN_PHONE, messagePayload, "541671652366663");
+
+    res.status(200).json({ message: "Order confirmation message sent successfully to admin" });
+  } catch (error) {
+    console.error("Error sending order confirmation:", error);
+    res.status(500).json({ message: "Failed to send order confirmation message" });
+  }
+});
 
 // Start the server
 const port = process.env.PORT || 5000;
