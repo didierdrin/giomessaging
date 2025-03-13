@@ -176,13 +176,13 @@ const handleTextMessages = async (message, phone, phoneNumberId) => {
     case "catalog":
       console.log("User requested the menu.");
       // Provide an array of categories available.
-      const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
+      //const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
       await sendCategoryList(phone, phoneNumberId, categories);
       break;
     case "products":
       console.log("User requested the menu.");
       // Provide an array of categories available.
-      //const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
+      const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
       await sendCategoryList(phone, phoneNumberId, categories);
       break;
     case "gio":
@@ -568,7 +568,7 @@ async function sendCategoryList(phone, phoneNumberId, categories) {
     const rows = categories.map(cat => ({
       id: cat, // use the category name (or ID) as the row id
       title: cat,
-      description: `See our ${cat} products`
+      //description: `See our ${cat} products`
     }));
 
     const payload = {
@@ -579,7 +579,7 @@ async function sendCategoryList(phone, phoneNumberId, categories) {
         type: "list",
         header: {
           type: "text",
-          text: "Our Categories"
+          text: "Welcome to Global In One App!"
         },
         body: {
           text: "Please choose a category to view products:"
