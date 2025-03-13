@@ -397,8 +397,12 @@ async function handlePhoneNumber2Logic(message, phone, changes, phoneNumberId) {
 
           // Call the order confirmation endpoint
           try {
+            // Get the orderId from the document reference
+      const orderDoc = await docReferenc.get();
+      const orderData = orderDoc.data();
+      
             await axios.post(`https://giomessaging.onrender.com/api/send-order-confirmation`, {
-              orderId: userContext.order.orderId
+              orderId: orderData.orderId
             });
             console.log("Order confirmation endpoint triggered for order:", orderData.orderId);
           } catch (error) {
