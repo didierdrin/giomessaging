@@ -541,6 +541,143 @@ async function sendWhatsAppMessage(phone, messagePayload, phoneNumberId) {
 }
 
 
+/**
+ * Sends an interactive list message showing all categories.
+ * When a user selects a category, your webhook should receive the selection and trigger sending catalog items.
+ */
+async function sendCategoryList(phone, phoneNumberId, categories) {
+  try {
+    const url = `https://graph.facebook.com/${VERSION}/${phoneNumberId}/messages`;
+
+    // Build list items from categories; each row's id is the category name.
+    const rows = categories.map(cat => ({
+      id: cat, // use the category name (or ID) as the row id
+      title: cat,
+      description: `See our ${cat} products`
+    }));
+
+    const payload = {
+      messaging_product: "whatsapp",
+      to: phone,
+      type: "interactive",
+      interactive: {
+        type: "list",
+        header: {
+          type: "text",
+          text: "Our Categories"
+        },
+        body: {
+          text: "Please choose a category to view products:"
+        },
+        footer: {
+          text: "Powered by Global In One LTD"
+        },
+        action: {
+          button: "Select Category",
+          sections: [
+            {
+              title: "Categories",
+              rows: rows
+            }
+          ]
+        }
+      }
+    };
+
+    const response = await axios({
+      method: "POST",
+      url: url,
+      headers: {
+        Authorization: `Bearer ${ACCESS_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      data: payload
+    });
+
+    console.log("Category list sent successfully to:", phone);
+    return response.data;
+  } catch (error) {
+    console.error("Error sending category list:", error.response?.data || error.message);
+    throw error;
+  }
+}
+
+/**
+ * Sends a catalog message for a single chunk of up to 30 products.
+ * The catalog message uses interactive type "product_list".
+ */
+async function sendCatalogChunk(phone, phoneNumberId, category, productRetailerIdsChunk) {
+  try {
+    const url = `https://graph.facebook.com/${VERSION}/${phoneNumberId}/messages`;
+
+    const payload = {
+      messaging_product: "whatsapp",
+      to: phone,
+      type: "interactive",
+      interactive: {
+        type: "product_list",
+        header: {
+          type: "text",
+          text: category  // Display the category as the header
+        },
+        body: { text: "Here are our products:" },
+        action: {
+          catalog_id: "2071018050036168", // Replace with your actual catalog id
+          sections: [
+            {
+              title: category,
+              product_items: productRetailerIdsChunk.map(id => ({
+                product_retailer_id: id
+              }))
+            }
+          ]
+        }
+      }
+    };
+
+    const response = await axios({
+      method: "POST",
+      url: url,
+      headers: {
+        Authorization: `Bearer ${ACCESS_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      data: payload
+    });
+
+    console.log(`Catalog chunk sent successfully for category ${category}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error sending catalog chunk:", error.response?.data || error.message);
+    throw error;
+  }
+}
+
+/**
+ * Splits an array into chunks of a given size.
+ */
+function chunkArray(array, chunkSize) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+/**
+ * Given a category and its product retailer IDs, sends catalog messages in chunks (30 items per message).
+ */
+async function sendCatalogForCategory(phone, phoneNumberId, category, productRetailerIds) {
+  // Split product retailer IDs into chunks of 30 items each.
+  const chunks = chunkArray(productRetailerIds, 30);
+  for (const chunk of chunks) {
+    await sendCatalogChunk(phone, phoneNumberId, category, chunk);
+    // Optionally add a small delay between messages to avoid rate limits:
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+}
+
+
 // new catalog with sections
 async function sendDefaultCatalog(phone, phoneNumberId) {
   try {
