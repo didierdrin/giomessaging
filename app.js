@@ -1185,6 +1185,89 @@ app.post("/api/send-order-confirmation", async (req, res) => {
   }
 });
 
+
+// Add this new endpoint for sending order confirmation message
+app.post("/api/send-order-confirmation", async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    
+    if (!orderId) {
+      return res.status(400).json({ message: "Order ID is required" });
+    }
+
+    // Get the active admin phone number from Firebase
+    const adminPhoneSnapshot = await firestore
+      .collection("adminPhoneGio")
+      .where("isActive", "==", true)
+      .limit(1)
+      .get();
+
+    if (adminPhoneSnapshot.empty) {
+      return res.status(400).json({ message: "No active admin phone number found" });
+    }
+
+    const ADMIN_PHONE = adminPhoneSnapshot.docs[0].data().number;
+
+    // Get the order details
+    const orderSnapshot = await firestore
+      .collection("whatsappOrdersNkundino")
+      .where("orderId", "==", orderId)
+      .get();
+
+    if (orderSnapshot.empty) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const orderData = orderSnapshot.docs[0].data();
+    const docRef = orderSnapshot.docs[0].ref;
+    
+    const orderDetails = orderData.products
+      .map(
+        (product) =>
+          `${product.product_name} x${product.quantity} - ${
+            product.price * product.quantity
+          } ${product.currency}`
+      )
+      .join("\n");
+
+    const messageBody = `New Order Received!\n\nOrder ID: ${orderData.orderId}\nCustomer Phone: ${orderData.phone}\nTotal Amount: ${orderData.amount} ${orderData.currency}\n\nItems:\n${orderDetails}\n\nPlease confirm or cancel this order.`;
+
+    const messagePayload = {
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: messageBody },
+        action: {
+          buttons: [
+            {
+              type: "reply",
+              reply: { id: `confirm_${orderId}`, title: "Confirm" },
+            },
+            {
+              type: "reply",
+              reply: { id: `cancel_${orderId}`, title: "Cancel" },
+            },
+          ],
+        },
+      },
+    };
+
+    await sendWhatsAppMessage(ADMIN_PHONE, messagePayload, "541671652366663");
+    
+    res.status(200).json({
+      message: "Order confirmation message sent successfully to admin",
+      adminPhone: ADMIN_PHONE // Optional: return the phone number used
+    });
+    
+  } catch (error) {
+    console.error("Error sending order confirmation:", error);
+    res.status(500).json({ 
+      message: "Failed to send order confirmation message",
+      error: error.message 
+    });
+  }
+});
+
 // Start the server
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
