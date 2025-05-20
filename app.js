@@ -174,26 +174,26 @@ const handleTextMessages = async (message, phone, phoneNumberId) => {
     case "product":
       console.log("User requested the menu.");
       // Provide an array of categories available.
-      const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
-      await sendCategoryList(phone, phoneNumberId, categories);
+      const categories1 = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
+      await sendCategoryList(phone, phoneNumberId, categories1);
       break;
     case "shop":
       console.log("User requested the menu.");
       // Provide an array of categories available.
-      const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
-      await sendCategoryList(phone, phoneNumberId, categories);
+      const categories2 = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
+      await sendCategoryList(phone, phoneNumberId, categories2);
       break;
     case "buy":
       console.log("User requested the menu.");
       // Provide an array of categories available.
-      const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
-      await sendCategoryList(phone, phoneNumberId, categories);
+      const categories3 = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
+      await sendCategoryList(phone, phoneNumberId, categories3);
       break;
     case "global in one":
       console.log("User requested the menu.");
       // Provide an array of categories available.
-      const categories = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
-      await sendCategoryList(phone, phoneNumberId, categories);
+      const categories4 = ["elitra-plus-series", "weather-proof-of", "group-sockets", "accessory", "automation-group", "mechanical-group", "cable-trunking", "lighting-group"];
+      await sendCategoryList(phone, phoneNumberId, categories4);
       break;
     case "gio":
       console.log("User requested the menu.");
